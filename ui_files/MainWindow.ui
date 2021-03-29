@@ -1,0 +1,614 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>556</width>
+    <height>514</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QGroupBox" name="sensorDataGroup">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>0</y>
+      <width>531</width>
+      <height>201</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Sensor Data</string>
+    </property>
+    <widget class="QGroupBox" name="magneticSensorGroup">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>30</y>
+       <width>121</width>
+       <height>161</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Magnetic (QMC-5883)</string>
+     </property>
+     <widget class="QLineEdit" name="xdataMag">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>30</y>
+        <width>61</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="ydataMag">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>60</y>
+        <width>61</width>
+        <height>20</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="zdataMag">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>90</y>
+        <width>61</width>
+        <height>20</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLabel" name="xlabelMag">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>33</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>X:</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="ylabelMag">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>63</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Y:</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="zlabelMag">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>93</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Z:</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="hdataMag">
+      <property name="geometry">
+       <rect>
+        <x>60</x>
+        <y>120</y>
+        <width>41</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLabel" name="hlabelMag">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>123</y>
+        <width>47</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Heading:</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="inertialSensorGroup">
+     <property name="geometry">
+      <rect>
+       <x>150</x>
+       <y>30</y>
+       <width>101</width>
+       <height>161</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Inertial (ITG-3200)</string>
+     </property>
+     <widget class="QLineEdit" name="xdataGyro">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>32</y>
+        <width>61</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="ydataGyro">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>62</y>
+        <width>61</width>
+        <height>20</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="zdataGyro">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>92</y>
+        <width>61</width>
+        <height>20</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLabel" name="xlabelGyro">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>35</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>X:</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="ylabelGyro">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>65</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Y:</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="zlabelGyro">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>95</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Z:</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="accelerationSensorGroup">
+     <property name="geometry">
+      <rect>
+       <x>260</x>
+       <y>30</y>
+       <width>131</width>
+       <height>161</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Acceleration (ADXL-345)</string>
+     </property>
+     <widget class="QLineEdit" name="xdataAcc">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>30</y>
+        <width>61</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="ydataAcc">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>60</y>
+        <width>61</width>
+        <height>20</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="zdataAcc">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>90</y>
+        <width>61</width>
+        <height>20</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLabel" name="xlabelAcc">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>33</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>X:</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="ylabelAcc">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>63</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Y:</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="zlabelAcc">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>93</y>
+        <width>16</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Z:</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>30</y>
+       <width>121</width>
+       <height>161</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Environment (BMP-280)</string>
+     </property>
+     <widget class="QLineEdit" name="lineEdit">
+      <property name="geometry">
+       <rect>
+        <x>60</x>
+        <y>30</y>
+        <width>51</width>
+        <height>20</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_2">
+      <property name="geometry">
+       <rect>
+        <x>60</x>
+        <y>60</y>
+        <width>51</width>
+        <height>20</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>32</y>
+        <width>47</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Deg C:</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_2">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>62</y>
+        <width>47</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Press:</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEdit_3">
+      <property name="geometry">
+       <rect>
+        <x>60</x>
+        <y>90</y>
+        <width>51</width>
+        <height>20</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_3">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>92</y>
+        <width>47</width>
+        <height>13</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Altitude:</string>
+      </property>
+     </widget>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="rgbTestDataGroup">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>200</y>
+      <width>531</width>
+      <height>191</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>RGB Test Mode Data</string>
+    </property>
+    <widget class="QLineEdit" name="redData">
+     <property name="geometry">
+      <rect>
+       <x>350</x>
+       <y>58</y>
+       <width>41</width>
+       <height>20</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="greenData">
+     <property name="geometry">
+      <rect>
+       <x>350</x>
+       <y>88</y>
+       <width>41</width>
+       <height>20</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="blueData">
+     <property name="geometry">
+      <rect>
+       <x>350</x>
+       <y>118</y>
+       <width>41</width>
+       <height>20</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="redLabel">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>60</y>
+       <width>31</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Red:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="greenLabel">
+     <property name="geometry">
+      <rect>
+       <x>300</x>
+       <y>90</y>
+       <width>41</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Green:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="blueLabel">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>120</y>
+       <width>31</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Blue:</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="xnormData">
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>58</y>
+       <width>61</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="ynormData">
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>88</y>
+       <width>61</width>
+       <height>20</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="xnormLabel">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>60</y>
+       <width>41</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Xnorm:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="znormLabel">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>120</y>
+       <width>51</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Znorm:</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="znormData">
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>118</y>
+       <width>61</width>
+       <height>20</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="ynormLabel">
+     <property name="geometry">
+      <rect>
+       <x>120</x>
+       <y>90</y>
+       <width>51</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Ynorm:</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="programControlGroup">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>389</y>
+      <width>531</width>
+      <height>101</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Program Control</string>
+    </property>
+    <widget class="QComboBox" name="comPortDropdown">
+     <property name="geometry">
+      <rect>
+       <x>240</x>
+       <y>20</y>
+       <width>101</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="comPortLabel">
+     <property name="geometry">
+      <rect>
+       <x>180</x>
+       <y>20</y>
+       <width>51</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>COM Port:</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="connectButton">
+     <property name="geometry">
+      <rect>
+       <x>290</x>
+       <y>60</y>
+       <width>75</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Connect</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="refreshButton">
+     <property name="geometry">
+      <rect>
+       <x>180</x>
+       <y>60</y>
+       <width>75</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Refresh</string>
+     </property>
+    </widget>
+   </widget>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
