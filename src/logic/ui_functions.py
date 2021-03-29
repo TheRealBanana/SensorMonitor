@@ -1,6 +1,7 @@
 import serial
 from serial import Serial
 import serial.tools.list_ports as list_serial_ports
+from .serialMonitor import SerialMonitor
 
 class UIFunctions:
     def __init__(self, uiref, MainWindow):
@@ -10,6 +11,7 @@ class UIFunctions:
         self.refreshSerial()
         self.connected = False
         self.serialConnection = None
+        self.serialMonitor = None
 
 
     def setupConnections(self):
@@ -35,17 +37,32 @@ class UIFunctions:
                 timeout=0)
         except:
             self.connected = False
+            return
         self.connect = True
         self.uiref.connectButton.setText("Disconnect")
         self.uiref.connectButton.clicked.disconnect(self.initSerial)
         self.uiref.connectButton.clicked.connect(self.disconSerial)
+        #Now spin off our serial monitor class with this new connection
+        self.serialMonitor = SerialMonitor(self.serialConnection)
+        self.serialMonitor.newdata.connect(self.updateDataFromSerial)
 
     def disconSerial(self):
+        #Quit our monitor thread first
+        self.serialMonitor.quit
         self.serialConnection.close()
         self.connected = False
         self.uiref.connectButton.setText("Connect")
         self.uiref.connectButton.clicked.disconnect(self.disconSerial)
         self.uiref.connectButton.clicked.connect(self.initSerial)
+
+    def updateDataFromSerial(self, serialdata):
+        #TODO Update me to handle all data, not just test data
+        x = str(serialdata[0])
+        y = str(serialdata[1])
+        z = str(serialdata[2])
+        self.uiref.xdataMag.setText(x)
+        self.uiref.ydataMag.setText(y)
+        self.uiref.zdataMag.setText(z)
 
     #TODO placeholder quit, clean stuff up here
     def quitApp(self):
