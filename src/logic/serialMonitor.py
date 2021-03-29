@@ -6,19 +6,30 @@ from PyQt5.QtCore import QThread, QObject, pyqtSignal, QVariant
 from time import sleep
 import ctypes
 
-coolit = 0.01 # throttle serial reading
+coolit = 0.001 # throttle serial reading
 
-#Test data class just to read 3 axis
-class TD(ctypes.Structure):
+#Not reading all the data we wanted but this is the data I can get right now
+#Accel is all 0's because thats the data we aren't sure about for now.
+class SD(ctypes.Structure):
     _fields_ = (
-        ('x', ctypes.c_short),
-        ('y', ctypes.c_short),
-        ('z', ctypes.c_short)
+        ('magx', ctypes.c_short),
+        ('magy', ctypes.c_short),
+        ('magz', ctypes.c_short),
+        ('magh', ctypes.c_short),
+        ('accelx', ctypes.c_short),
+        ('accely', ctypes.c_short),
+        ('accelz', ctypes.c_short),
+        ('envtemp', ctypes.c_short),
+        ('envpress', ctypes.c_long),
+        ('envalt', ctypes.c_short),
+        ('rgbxnorm', ctypes.c_short),
+        ('rgbynorm', ctypes.c_short),
+        ('rgbznorm', ctypes.c_short),
     )
 
 
 class MonThread(QObject):
-    newdata = pyqtSignal(list)
+    newdata = pyqtSignal(QVariant)
     def __init__(self, connection, parent=None):
         super(MonThread, self).__init__(parent)
         self.quitting = False
@@ -40,15 +51,14 @@ class MonThread(QObject):
                 continue
             #Now read the data into a cstruct
             try:
-                data = TD.from_buffer_copy(b)
+                data = SD.from_buffer_copy(b)
             except: #Random weird data. Probably a serial issue.
                 continue
-            realdata = [data.x, data.y, data.z]
-            self.newdata.emit(realdata)
+            self.newdata.emit(data)
 
 
 class SerialMonitor(QObject):
-    newdata = pyqtSignal(list)
+    newdata = pyqtSignal(QVariant)
 
     def __init__(self, connection, parent=None):
         super(SerialMonitor, self).__init__(parent)

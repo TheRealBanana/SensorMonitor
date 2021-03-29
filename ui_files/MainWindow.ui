@@ -307,7 +307,7 @@
       </property>
      </widget>
     </widget>
-    <widget class="QGroupBox" name="groupBox">
+    <widget class="QGroupBox" name="envSensorGroup">
      <property name="geometry">
       <rect>
        <x>400</x>
@@ -319,7 +319,7 @@
      <property name="title">
       <string>Environment (BMP-280)</string>
      </property>
-     <widget class="QLineEdit" name="lineEdit">
+     <widget class="QLineEdit" name="tempdataEnv">
       <property name="geometry">
        <rect>
         <x>60</x>
@@ -329,7 +329,7 @@
        </rect>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_2">
+     <widget class="QLineEdit" name="pressdataEnv">
       <property name="geometry">
        <rect>
         <x>60</x>
@@ -339,7 +339,7 @@
        </rect>
       </property>
      </widget>
-     <widget class="QLabel" name="label">
+     <widget class="QLabel" name="templabelEnv">
       <property name="geometry">
        <rect>
         <x>10</x>
@@ -352,7 +352,7 @@
        <string>Deg C:</string>
       </property>
      </widget>
-     <widget class="QLabel" name="label_2">
+     <widget class="QLabel" name="presslabelEnv">
       <property name="geometry">
        <rect>
         <x>10</x>
@@ -365,7 +365,7 @@
        <string>Press:</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_3">
+     <widget class="QLineEdit" name="altdataEnv">
       <property name="geometry">
        <rect>
         <x>60</x>
@@ -375,7 +375,7 @@
        </rect>
       </property>
      </widget>
-     <widget class="QLabel" name="label_3">
+     <widget class="QLabel" name="altlabelEnv">
       <property name="geometry">
        <rect>
         <x>10</x>

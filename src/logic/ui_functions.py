@@ -35,8 +35,10 @@ class UIFunctions:
                 stopbits=serial.STOPBITS_ONE, \
                 bytesize=serial.EIGHTBITS, \
                 timeout=0)
-        except:
+        except Exception as e:
             self.connected = False
+            print("Error trying to connect to the specified COM port:")
+            print(e)
             return
         self.connect = True
         self.uiref.connectButton.setText("Disconnect")
@@ -55,14 +57,38 @@ class UIFunctions:
         self.uiref.connectButton.clicked.disconnect(self.disconSerial)
         self.uiref.connectButton.clicked.connect(self.initSerial)
 
+        """
+        ('magx', ctypes.c_short),
+        ('magy', ctypes.c_short),
+        ('magz', ctypes.c_short),
+        ('magh', ctypes.c_short),
+        ('accelx', ctypes.c_short),
+        ('accely', ctypes.c_short),
+        ('accelz', ctypes.c_short),
+        ('envtemp', ctypes.c_short),
+        ('envpress', ctypes.c_long),
+        ('envalt', ctypes.c_short),
+        ('rgbxnorm', ctypes.c_short),
+        ('rgbynorm', ctypes.c_short),
+        ('rgbznorm', ctypes.c_short),
+        """
     def updateDataFromSerial(self, serialdata):
-        #TODO Update me to handle all data, not just test data
-        x = str(serialdata[0])
-        y = str(serialdata[1])
-        z = str(serialdata[2])
-        self.uiref.xdataMag.setText(x)
-        self.uiref.ydataMag.setText(y)
-        self.uiref.zdataMag.setText(z)
+        #Magnetic sensor data
+        self.uiref.xdataMag.setText(str(serialdata.magx))
+        self.uiref.ydataMag.setText(str(serialdata.magy))
+        self.uiref.zdataMag.setText(str(serialdata.magz))
+        self.uiref.hdataMag.setText(str(serialdata.magh))
+        #Acceleration sensor data
+        #
+        #Environmental sensor data
+        self.uiref.tempdataEnv.setText(str(serialdata.envtemp))
+        self.uiref.pressdataEnv.setText(str(serialdata.envpress))
+        self.uiref.altdataEnv.setText(str(serialdata.envalt))
+        #RGB program data
+        self.uiref.xnormData.setText(str(serialdata.rgbxnorm))
+        self.uiref.ynormData.setText(str(serialdata.rgbynorm))
+        self.uiref.znormData.setText(str(serialdata.rgbznorm))
+
 
     #TODO placeholder quit, clean stuff up here
     def quitApp(self):
