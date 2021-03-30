@@ -13,16 +13,19 @@ class UIFunctions:
         self.serialConnection = None
         self.serialMonitor = None
 
-
     def setupConnections(self):
         self.uiref.connectButton.clicked.connect(self.initSerial)
         self.uiref.refreshButton.clicked.connect(self.refreshSerial)
 
     def refreshSerial(self):
         print("Refreshing list of available serial ports")
+        #Clear our old list
+        for i in range(self.uiref.comPortDropdown.count()):
+            self.uiref.comPortDropdown.removeItem(i)
+        #And repopulate it
         portlist = list_serial_ports.comports()
         for p in portlist:
-            self.uiref.comPortDropdown.addItem(p.name, userData=p)
+            self.uiref.comPortDropdown.addItem(p.name)#, userData=p) # Not actually making use of userData for now
 
     def initSerial(self):
         print("Starting serial connection ")
@@ -41,6 +44,7 @@ class UIFunctions:
             print(e)
             return
         self.connect = True
+        print("Serial connection established, waiting for data...")
         self.uiref.connectButton.setText("Disconnect")
         self.uiref.connectButton.clicked.disconnect(self.initSerial)
         self.uiref.connectButton.clicked.connect(self.disconSerial)
@@ -50,7 +54,7 @@ class UIFunctions:
 
     def disconSerial(self):
         #Quit our monitor thread first
-        self.serialMonitor.quit
+        self.serialMonitor.quit()
         self.serialConnection.close()
         self.connected = False
         self.uiref.connectButton.setText("Connect")

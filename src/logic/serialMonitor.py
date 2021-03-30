@@ -36,7 +36,7 @@ class MonThread(QObject):
         self.ser = connection
 
     def stopthread(self):
-        self.stopping = True
+        self.quitting = True
 
     def readdatafromserial(self):
         while self.quitting is False:
@@ -55,6 +55,7 @@ class MonThread(QObject):
             except: #Random weird data. Probably a serial issue.
                 continue
             self.newdata.emit(data)
+        print("Quit called on MonThread")
 
 
 class SerialMonitor(QObject):
@@ -73,8 +74,10 @@ class SerialMonitor(QObject):
 
     def quit(self):
         #End the thread and then close out
-        self.thread.stopthread()
-        self.thread.quit()
+        self.mt.stopthread()
+        self.thread.terminate()
+        self.thread.wait()
+        #self.thread.deleteLater()
         self.thread = None
 
     def initmon(self):
