@@ -15,7 +15,6 @@ class UIFunctions:
         self.MainWindow = MainWindow
         self.setupConnections()
         self.refreshSerial()
-        self.connected = False
         self.serialConnection = None
         self.serialMonitor = None
 
@@ -45,11 +44,9 @@ class UIFunctions:
                 bytesize=serial.EIGHTBITS, \
                 timeout=0)
         except Exception as e:
-            self.connected = False
             print("Error trying to connect to the specified COM port:")
             print(e)
             return
-        self.connect = True
         print("Serial connection established, waiting for data...")
         self.uiref.connectButton.setText("Disconnect")
         self.uiref.connectButton.clicked.disconnect(self.initSerial)
@@ -62,7 +59,6 @@ class UIFunctions:
         #Quit our monitor thread first
         self.serialMonitor.quit()
         self.serialConnection.close()
-        self.connected = False
         self.uiref.connectButton.setText("Connect")
         self.uiref.connectButton.clicked.disconnect(self.disconSerial)
         self.uiref.connectButton.clicked.connect(self.initSerial)

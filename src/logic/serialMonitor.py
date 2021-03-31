@@ -8,8 +8,7 @@ import ctypes
 
 coolit = 0.001 # throttle serial reading
 
-#Not reading all the data we wanted but this is the data I can get right now
-#Accel is all 0's because thats the data we aren't sure about for now.
+#Has to be in the same order as the struct in our arduino code
 class SD(ctypes.Structure):
     _fields_ = (
         ('magx', ctypes.c_int),
@@ -32,7 +31,6 @@ class SD(ctypes.Structure):
         ('rgbynorm', ctypes.c_int),
         ('rgbznorm', ctypes.c_int),
     )
-
 
 #Having some trouble with pyserial. For some reason its stopping at 32 bytes.
 def _readline(ser):
