@@ -122,8 +122,9 @@ class UIFunctions:
         self.uiref.greenData.setStyleSheet(green)
         self.uiref.blueData.setStyleSheet(blue)
 
-
-    #TODO placeholder quit, clean stuff up here
     def quitApp(self):
-        print("Cleaning up stuff...") #We're not really
-        print("Quitting app...") #yeah... no.
+        print("Cleaning up stuff...")
+        #Do we need to kill the serial connection?
+        if  self.serialConnection is not None and self.serialConnection.isOpen() is True:
+            self.disconSerial()
+        print("Quitting app...")
