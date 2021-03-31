@@ -12,21 +12,38 @@ coolit = 0.001 # throttle serial reading
 #Accel is all 0's because thats the data we aren't sure about for now.
 class SD(ctypes.Structure):
     _fields_ = (
-        ('magx', ctypes.c_short),
-        ('magy', ctypes.c_short),
-        ('magz', ctypes.c_short),
-        ('magh', ctypes.c_short),
-        ('accelx', ctypes.c_short),
-        ('accely', ctypes.c_short),
-        ('accelz', ctypes.c_short),
-        ('envtemp', ctypes.c_short),
-        ('envpress', ctypes.c_long),
-        ('envalt', ctypes.c_short),
-        ('rgbxnorm', ctypes.c_short),
-        ('rgbynorm', ctypes.c_short),
-        ('rgbznorm', ctypes.c_short),
+        ('magx', ctypes.c_int),
+        ('magy', ctypes.c_int),
+        ('magz', ctypes.c_int),
+        ('magh', ctypes.c_float),
+        ('accelx', ctypes.c_int),
+        ('accely', ctypes.c_int),
+        ('accelz', ctypes.c_int),
+        ('gyrox', ctypes.c_int),
+        ('gyroy', ctypes.c_int),
+        ('gyroz', ctypes.c_int),
+        ('yaw', ctypes.c_int),
+        ('pitch', ctypes.c_int),
+        ('roll', ctypes.c_int),
+        ('envtemp', ctypes.c_float),
+        ('envpress', ctypes.c_int),
+        ('envalt', ctypes.c_float),
+        ('rgbxnorm', ctypes.c_int),
+        ('rgbynorm', ctypes.c_int),
+        ('rgbznorm', ctypes.c_int),
     )
 
+
+#Having some trouble with pyserial. For some reason its stopping at 32 bytes.
+def _readline(ser):
+    c = ser.read(1)
+    line = c
+    while c != 13 and line[-1] != 10:
+        c = ser.read(1)
+        line += c
+    c = ser.read(1)
+    line += c
+    return line
 
 class MonThread(QObject):
     newdata = pyqtSignal(QVariant)
@@ -43,11 +60,8 @@ class MonThread(QObject):
             sleep(coolit) # Dont want to go too crazy
             #Read a single line
             try:
-                b = self.ser.readline()
+                b = _readline(self.ser)
             except:
-                continue
-            #Do we have a good line (i.e. ends with \r\n)?
-            if len(b) < 2 or b[-1] != 10 or b[-2] != 13:
                 continue
             #Now read the data into a cstruct
             try:

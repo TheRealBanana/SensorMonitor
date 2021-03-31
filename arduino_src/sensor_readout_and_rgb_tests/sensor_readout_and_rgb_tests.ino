@@ -14,8 +14,11 @@
 typedef DFRobot_BMP280_IIC    BMP;
 BMP   bmp(&Wire, BMP::eSdo_high);
 #define SEA_LEVEL_PRESSURE    1015.0f   // sea level pressure
-FreeSixIMU sixDOF = FreeSixIMU();
 DFRobot_QMC5883 compass;
+FreeSixIMU sixDOF = FreeSixIMU();
+float angles[3]; // yaw pitch roll
+int accval[3]; //Raw acc
+float gyroval[3]; // Raw gyro
 
 int modepin = 2;
 int Rpin = 3;
@@ -35,7 +38,7 @@ int PWM_MAX = 255;
 //Having trouble with the serial output being corrupted at high refresh rates
 //But at the speed the serial data is fine, the RGB outputs arent smooth.
 //The attempt here is to just run the serial data every Nth cycle
-int throttle = 0;
+int throttle = 1;
 
 void setup()
 {
@@ -119,21 +122,28 @@ void polaritymode(Vector mag) {
 }
 
 struct sensordata {
-  int magx;
-  int magy;
-  int magz;
-  int magh;
-  int accelx;
-  int accely;
-  int accelz;
-  int envtemp;
+  long magx;
+  long magy;
+  long magz;
+  float magh;
+  long accelx;
+  long accely;
+  long accelz;
+  long gyrox;
+  long gyroy;
+  long gyroz;
+  long yaw;
+  long pitch;
+  long roll;
+  float envtemp;
   long envpress;
-  int envalt;
-  int rgbxnorm;
-  int rgbynorm;
-  int rgbznorm;
+  float envalt;
+  long rgbxnorm;
+  long rgbynorm;
+  long rgbznorm;
 };
 typedef struct sensordata _SD;
+
 
 void sensormonitorfeed() {
   // Feed function for the SensorMonitor app
@@ -148,19 +158,28 @@ void sensormonitorfeed() {
   int magynorm = map(magy, SENSOR_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
   int magznorm = map(magz, SENSOR_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
   compass.getHeadingDegrees();
-  int h = (int)mag.HeadingDegress;
+  float h = mag.HeadingDegress;
 
   _SD sensordata;
   sensordata.magx = mag.XAxis;
   sensordata.magy = mag.YAxis;
   sensordata.magz = mag.ZAxis;
   sensordata.magh = h;
-  sensordata.accelx = 0;
-  sensordata.accely = 0;
-  sensordata.accelz = 0;
-  sensordata.envtemp = (int)bmp.getTemperature();
+  sixDOF.gyro.readGyro(gyroval);
+  sixDOF.acc.readAccel(accval);
+  sixDOF.getAngles(angles);
+  sensordata.accelx = accval[0];
+  sensordata.accely = accval[1];
+  sensordata.accelz = accval[2];
+  sensordata.gyrox = gyroval[0];
+  sensordata.gyroy = gyroval[1];
+  sensordata.gyroz = gyroval[2];
+  sensordata.yaw = angles[0];
+  sensordata.pitch = angles[1];
+  sensordata.roll = angles[2];
+  sensordata.envtemp = bmp.getTemperature();
   sensordata.envpress = (long)bmp.getPressure();
-  sensordata.envalt = (int)bmp.calAltitude(SEA_LEVEL_PRESSURE, sensordata.envpress);
+  sensordata.envalt = bmp.calAltitude(SEA_LEVEL_PRESSURE, sensordata.envpress);
   //RGB data depends on whether we are in 3-axis or polarity mode
   if (digitalRead(modepin) == HIGH) { //3-axis light show
     sensordata.rgbxnorm = magxnorm;
@@ -178,6 +197,8 @@ void sensormonitorfeed() {
     else sensordata.rgbxnorm = pznorm;
 
   }
+  //Help with corrupted data?
+  Serial.flush();
   Serial.write((uint8_t *) &sensordata, (uint16_t) sizeof(sensordata));
   Serial.print("\r\n");
 }

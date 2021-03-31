@@ -3,6 +3,12 @@ from serial import Serial
 import serial.tools.list_ports as list_serial_ports
 from .serialMonitor import SerialMonitor
 
+#Was going to just subclass the qlineedit but then I'd have to modify MainWindow.py and I dont want to do that
+#This works and cleans up the code
+def setElementValue(element, value):
+    element.setText(str(value))
+    element.setCursorPosition(0)
+
 class UIFunctions:
     def __init__(self, uiref, MainWindow):
         self.uiref = uiref
@@ -62,36 +68,63 @@ class UIFunctions:
         self.uiref.connectButton.clicked.connect(self.initSerial)
 
         """
-        ('magx', ctypes.c_short),
-        ('magy', ctypes.c_short),
-        ('magz', ctypes.c_short),
-        ('magh', ctypes.c_short),
-        ('accelx', ctypes.c_short),
-        ('accely', ctypes.c_short),
-        ('accelz', ctypes.c_short),
-        ('envtemp', ctypes.c_short),
+        ('magx', ctypes.c_int),
+        ('magy', ctypes.c_int),
+        ('magz', ctypes.c_int),
+        ('magh', ctypes.c_float),
+        ('accelx', ctypes.c_int),
+        ('accely', ctypes.c_int),
+        ('accelz', ctypes.c_int),
+        ('gyrox', ctypes.c_int),
+        ('gyroy', ctypes.c_int),
+        ('gyroz', ctypes.c_int),
+        ('yaw', ctypes.c_int),
+        ('pitch', ctypes.c_int),
+        ('roll', ctypes.c_int),
+        ('envtemp', ctypes.c_float),
         ('envpress', ctypes.c_long),
-        ('envalt', ctypes.c_short),
-        ('rgbxnorm', ctypes.c_short),
-        ('rgbynorm', ctypes.c_short),
-        ('rgbznorm', ctypes.c_short),
+        ('envalt', ctypes.c_int),
+        ('rgbxnorm', ctypes.c_int),
+        ('rgbynorm', ctypes.c_int),
+        ('rgbznorm', ctypes.c_int),
         """
     def updateDataFromSerial(self, serialdata):
         #Magnetic sensor data
-        self.uiref.xdataMag.setText(str(serialdata.magx))
-        self.uiref.ydataMag.setText(str(serialdata.magy))
-        self.uiref.zdataMag.setText(str(serialdata.magz))
-        self.uiref.hdataMag.setText(str(serialdata.magh))
+        setElementValue(self.uiref.xdataMag, serialdata.magx)
+        setElementValue(self.uiref.ydataMag, serialdata.magy)
+        setElementValue(self.uiref.zdataMag, serialdata.magz)
+        setElementValue(self.uiref.hdataMag, serialdata.magh)
         #Acceleration sensor data
-        #
+        setElementValue(self.uiref.xdataAcc, serialdata.accelx)
+        setElementValue(self.uiref.ydataAcc, serialdata.accely)
+        setElementValue(self.uiref.zdataAcc, serialdata.accelz)
+        #Gyro sensor data
+        setElementValue(self.uiref.xdataGyro, serialdata.gyrox)
+        setElementValue(self.uiref.ydataGyro, serialdata.gyroy)
+        setElementValue(self.uiref.zdataGyro, serialdata.gyroz)
+        #Orientation sensor data
+        setElementValue(self.uiref.yawdata, serialdata.yaw)
+        setElementValue(self.uiref.pitchdata, serialdata.pitch)
+        setElementValue(self.uiref.rolldata, serialdata.roll)
         #Environmental sensor data
-        self.uiref.tempdataEnv.setText(str(serialdata.envtemp))
-        self.uiref.pressdataEnv.setText(str(serialdata.envpress))
-        self.uiref.altdataEnv.setText(str(serialdata.envalt))
+        setElementValue(self.uiref.tempdataEnv, serialdata.envtemp)
+        setElementValue(self.uiref.pressdataEnv, serialdata.envpress)
+        setElementValue(self.uiref.altdataEnv, serialdata.envalt)
         #RGB program data
-        self.uiref.xnormData.setText(str(serialdata.rgbxnorm))
-        self.uiref.ynormData.setText(str(serialdata.rgbynorm))
-        self.uiref.znormData.setText(str(serialdata.rgbznorm))
+        setElementValue(self.uiref.xnormData, serialdata.rgbxnorm)
+        setElementValue(self.uiref.ynormData, serialdata.rgbynorm)
+        setElementValue(self.uiref.znormData, serialdata.rgbznorm)
+        #I for some reason thought I had two sets of output data for RGB but I just have one
+        #The other boxes we'll just use to color
+        #Just plugging in the numbers gives a gradient from black to full color but we want
+        #a gradient from white to full color. That requires subtracting the color component we want
+        #from the other colors, and setting our color to 255.
+        red = "background-color: rgb(%s, %s, %s);" % (255, 255-serialdata.rgbxnorm, 255-serialdata.rgbxnorm)
+        green = "background-color: rgb(%s, %s, %s);" % (255-serialdata.rgbynorm, 255, 255-serialdata.rgbynorm)
+        blue = "background-color: rgb(%s, %s, %s);" % (255-serialdata.rgbznorm, 255-serialdata.rgbznorm, 255)
+        self.uiref.redData.setStyleSheet(red)
+        self.uiref.greenData.setStyleSheet(green)
+        self.uiref.blueData.setStyleSheet(blue)
 
 
     #TODO placeholder quit, clean stuff up here
