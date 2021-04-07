@@ -62,7 +62,6 @@ void magcal(int dur) {
     mag_temp[0] = mag.XAxis;
     mag_temp[1] = mag.YAxis;
     mag_temp[2] = mag.ZAxis;
-    int magx = constrain(mag.XAxis, SENSOR_MIN, SENSOR_MAX);
     for (int j=0; j<3; j++) {
        if (mag_temp[j] > mag_max[j]) mag_max[j] = mag_temp[j];
        if (mag_temp[j] < mag_min[j]) mag_min[j] = mag_temp[j];
