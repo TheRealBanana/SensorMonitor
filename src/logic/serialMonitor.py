@@ -36,11 +36,13 @@ class SD(ctypes.Structure):
 def _readline(ser):
     c = ser.read(1)
     line = c
-    while c != 13 and line[-1] != 10:
+    while c != 13 and line[-1] != 10 and line[-7:-2] != "ZENDZ":
         c = ser.read(1)
         line += c
     c = ser.read(1)
     line += c
+    #Cut out the ZENDZ
+    line = line[:-7] + line[-2:]
     return line
 
 class MonThread(QObject):

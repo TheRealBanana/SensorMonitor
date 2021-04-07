@@ -28,8 +28,19 @@ int Bpin = 6;
 //Range values for sensor
 //The min constrain here is based on the ambient magnetic field at my location to get rid of some noise
 //It really needs proper compensation but this works for now
-int SENSOR_MIN = 2000;
+int SENSOR_MIN = -32767;
+int AMBIENT_MIN = 2000;
 int SENSOR_MAX = 32767;
+Vector mag = {0,0,0};
+//Magnetic calibration using this page as a guide:
+// https://github.com/kriswiner/MPU6050/wiki/Simple-and-Effective-Magnetometer-Calibration
+int mag_bias[3] = {0,0,0};
+float mag_scale[3] = {0.0f,0.0f,0.0f};
+int mag_max[3] = {-32767,-32767,-32767};
+int mag_min[3] = {32767,32767,32767};
+int mag_temp[3] = {0,0,0};
+int zmag_polarity_bias = 0;
+int mag_cal_duration = 15; //In seconds
 
 int PWM_MIN = 0;
 int PWM_MAX = 255;
@@ -39,6 +50,80 @@ int PWM_MAX = 255;
 //But at the speed the serial data is fine, the RGB outputs arent smooth.
 //The attempt here is to just run the serial data every Nth cycle
 int throttle = 1;
+
+//Calibrate our magnetometer for dur seconds
+void magcal(int dur) {  
+  //Turn on red LED to indicate we are calibrating
+  analogWrite(Rpin, 255);
+  //Calibrate for dur seconds
+  for (int t=0; t<dur*10; t++) {
+    //Figure out the min and max of our sensor on all three axis
+    mag = compass.readRaw();
+    mag_temp[0] = mag.XAxis;
+    mag_temp[1] = mag.YAxis;
+    mag_temp[2] = mag.ZAxis;
+    int magx = constrain(mag.XAxis, SENSOR_MIN, SENSOR_MAX);
+    for (int j=0; j<3; j++) {
+       if (mag_temp[j] > mag_max[j]) mag_max[j] = mag_temp[j];
+       if (mag_temp[j] < mag_min[j]) mag_min[j] = mag_temp[j];
+    } 
+    delay(100);
+  }
+  //Calculate the bias and scaling factors
+  //To use these correction values we subtract the bias factor and multiply by the scale factor
+  mag_bias[0] = (mag_max[0] + mag_min[0])/2;
+  mag_bias[1] = (mag_max[1] + mag_min[1])/2;
+  mag_bias[2] = (mag_max[2] + mag_min[2])/2;
+  int mag_scale_tmp[3] = {
+    (mag_max[0] - mag_min[0])/2,
+    (mag_max[1] - mag_min[1])/2,
+    (mag_max[2] - mag_min[2])/2
+  };
+  float avg_rad = (mag_scale_tmp[0] + mag_scale_tmp[1] + mag_scale_tmp[2]) / 3.0f;
+  mag_scale[0] = avg_rad/((float)mag_scale_tmp[0]);
+  mag_scale[1] = avg_rad/((float)mag_scale_tmp[1]);
+  mag_scale[2] = avg_rad/((float)mag_scale_tmp[2]);
+  //Try and figure out a dynamic noise floor
+  //Currently we just ignore anything below 2000 but maybe we can fine tune that at runtime
+  //Maybe try just using the largest value we find in our min/max cal?
+  //int m = max(abs(mag_min[0]), abs(mag_min[1]));
+  //m = max(m, abs(mag_min[2]));
+  //m = max(m, mag_max[0]);
+  //m = max(m, mag_max[1]);
+  //m = max(m, mag_max[2]);
+  //Or maybe add up all the mins and maxes and take the average?
+  int m = (abs(mag_min[0]) + abs(mag_min[1]) + abs(mag_min[2]) + mag_max[0] + mag_max[1] + mag_max[2])/6;
+  //Indicate we are checking zero
+  analogWrite(Bpin, 255);
+  delay(5000);
+  mag = compass.readRaw();
+  zmag_polarity_bias = mag.ZAxis;
+  //Indicate we are done calibrating 
+  analogWrite(Rpin, 0);
+  analogWrite(Bpin, 0);
+  delay(500);
+  rgbflash(Rpin, 1);
+  rgbflash(Gpin, 1);
+  rgbflash(Bpin, 1);
+}
+
+Vector applymagcal(Vector mag) {
+  Vector out = {
+    constrain(mag.XAxis, SENSOR_MIN, SENSOR_MAX),
+    constrain(mag.YAxis, SENSOR_MIN, SENSOR_MAX),
+    constrain(mag.ZAxis, SENSOR_MIN, SENSOR_MAX)
+  };
+  //Add our bias factor to recenter our data to 0
+  out.XAxis = out.XAxis - mag_bias[0];
+  out.YAxis = out.YAxis - mag_bias[1];
+  out.ZAxis = out.ZAxis - mag_bias[2];
+  //And multiply by the scaling factor to align the min/max range
+  out.XAxis = mag.XAxis * mag_scale[0];
+  out.YAxis = mag.YAxis * mag_scale[1];
+  out.ZAxis = mag.ZAxis * mag_scale[2];
+  
+  return out;
+}
 
 void setup()
 {
@@ -57,7 +142,7 @@ void setup()
   bmp.reset();
   bmp.begin();
   //IMU init
-  sixDOF.init();
+  sixDOF.init(true);
   
   // delay(1000);
   
@@ -70,32 +155,30 @@ void setup()
   // Using socal declination of 11'37E
   float declinationAngle = (11 + (37.0 / 60.0)) / (180 / PI);
   compass.setDeclinationAngle(declinationAngle);
-  //Flash our LEDs to signal that we're about to begin
-  rgbflash();
+  //Calibrate our magnetic sensor
+  magcal(mag_cal_duration);
 }
-void rgbflash() {
-  analogWrite(Rpin, 255);
-  delay(100);
-  analogWrite(Rpin, 0);
-  delay(100);
-  analogWrite(Gpin, 255);
-  delay(100);
-  analogWrite(Gpin, 0);
-  delay(100);
-  analogWrite(Bpin, 255);
-  delay(100);
-  analogWrite(Bpin, 0);
+
+void rgbflash(int pin, int num) {
+  for (int i=0; i<num; i++) {
+    analogWrite(pin, 255);
+    delay(100);
+    analogWrite(pin, 0);
+    delay(100);
+  }
 }
 
 //Colors for each axis
 void maglight1(Vector mag) {
+  //Apply our calibration factors to the magnetic data
+  Vector mag2 = applymagcal(mag);
+  int x = constrain(abs(mag.XAxis), AMBIENT_MIN, SENSOR_MAX);
+  int y = constrain(abs(mag.YAxis), AMBIENT_MIN, SENSOR_MAX);
+  int z = constrain(abs(mag.ZAxis), AMBIENT_MIN, SENSOR_MAX);
   //Normalize our data to 0-255 for analog output
-  int x = constrain(abs(mag.XAxis), SENSOR_MIN, SENSOR_MAX);
-  int y = constrain(abs(mag.YAxis), SENSOR_MIN, SENSOR_MAX);
-  int z = constrain(abs(mag.ZAxis), SENSOR_MIN, SENSOR_MAX);
-  int xnorm = map(x, SENSOR_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
-  int ynorm = map(y, SENSOR_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
-  int znorm = map(z, SENSOR_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
+  int xnorm = map(x, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
+  int ynorm = map(y, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
+  int znorm = map(z, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
   //And now simply write the value out to our RGB leds
   //Serial.print("DATA: ");
   //Serial.print(xnorm);
@@ -103,9 +186,9 @@ void maglight1(Vector mag) {
   //Serial.print(ynorm);
   //Serial.print("   ");
   //Serial.println(znorm);
-  analogWrite(Rpin, abs(xnorm));
-  analogWrite(Gpin, abs(ynorm));
-  analogWrite(Bpin, abs(znorm));
+  analogWrite(Rpin, xnorm);
+  analogWrite(Gpin, ynorm);
+  analogWrite(Bpin, znorm);
 }
 
 void polaritymode(Vector mag) {
@@ -113,12 +196,16 @@ void polaritymode(Vector mag) {
   //North or south pole determines red or blue LED
   int outpin = Rpin;
   int otherpin = Bpin;
-  if (mag.ZAxis < 0) { outpin = Bpin; otherpin = Rpin; }
+  //Apply our calibration factors to the magnetic data
+  Vector mag2 = applymagcal(mag);
+  if (mag2.ZAxis < 0) { outpin = Bpin; otherpin = Rpin; }
   //And now the same as maglight1 but just for z data
-  int z = constrain(abs(mag.ZAxis), SENSOR_MIN, SENSOR_MAX);
-  int znorm = map(z, SENSOR_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
+  int z = mag2.ZAxis - zmag_polarity_bias;
+  z = constrain(abs(z), AMBIENT_MIN, SENSOR_MAX);
+  int znorm = map(z, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
   analogWrite(outpin, znorm);
   analogWrite(otherpin, 0);
+  analogWrite(Gpin, 0);
 }
 
 struct sensordata {
@@ -150,24 +237,28 @@ void sensormonitorfeed() {
   // Simply sends our struct over serial to the receiving side.
   
   //Mag data
-  Vector mag = compass.readRaw();
-  int magx = constrain(abs(mag.XAxis), SENSOR_MIN, SENSOR_MAX);
-  int magy = constrain(abs(mag.YAxis), SENSOR_MIN, SENSOR_MAX);
-  int magz = constrain(abs(mag.ZAxis), SENSOR_MIN, SENSOR_MAX);
-  int magxnorm = map(magx, SENSOR_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
-  int magynorm = map(magy, SENSOR_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
-  int magznorm = map(magz, SENSOR_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
+  mag = compass.readRaw();
+  //Apply our calibration factors to the magnetic data
+  Vector mag2 = applymagcal(mag);
+  int rawmagx = constrain(abs(mag.XAxis), AMBIENT_MIN, SENSOR_MAX);
+  int rawmagy = constrain(abs(mag.YAxis), AMBIENT_MIN, SENSOR_MAX);
+  int rawmagz = constrain(abs(mag.ZAxis), AMBIENT_MIN, SENSOR_MAX);
+  int magxnorm = map(rawmagx, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
+  int magynorm = map(rawmagy, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
+  int magznorm = map(rawmagz, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
   compass.getHeadingDegrees();
   float h = mag.HeadingDegress;
 
   _SD sensordata;
-  sensordata.magx = mag.XAxis;
-  sensordata.magy = mag.YAxis;
-  sensordata.magz = mag.ZAxis;
+  sensordata.magx = mag2.XAxis;
+  sensordata.magy = mag2.YAxis;
+  sensordata.magz = mag2.ZAxis;
   sensordata.magh = h;
   sixDOF.gyro.readGyro(gyroval);
   sixDOF.acc.readAccel(accval);
-  sixDOF.getAngles(angles);
+  //Sensor drift, especially for the yaw axis, is really bad for some reason with getAngles()
+  //sixDOF.getAngles(angles);
+  sixDOF.getYawPitchRoll(angles);
   sensordata.accelx = accval[0];
   sensordata.accely = accval[1];
   sensordata.accelz = accval[2];
@@ -191,8 +282,8 @@ void sensormonitorfeed() {
     sensordata.rgbynorm = 0;
     sensordata.rgbznorm = 0;
     //same as maglight1 but just for z data
-    int pz = constrain(abs(mag.ZAxis), SENSOR_MIN, SENSOR_MAX);
-    int pznorm = map(pz, SENSOR_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
+    int pz = constrain(mag2.ZAxis - zmag_polarity_bias, AMBIENT_MIN, SENSOR_MAX);
+    int pznorm = map(abs(pz), AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
     if (mag.ZAxis < 0) sensordata.rgbznorm = pznorm;
     else sensordata.rgbxnorm = pznorm;
 
@@ -200,12 +291,12 @@ void sensormonitorfeed() {
   //Help with corrupted data?
   Serial.flush();
   Serial.write((uint8_t *) &sensordata, (uint16_t) sizeof(sensordata));
-  Serial.print("\r\n");
+  Serial.print("ZENDZ\r\n"); // Think this might fix the issues with connection dropouts
 }
 
 void loop()
 {
-  Vector mag = compass.readRaw();
+  mag = compass.readRaw();
   //Light show
   if (digitalRead(modepin) == HIGH) maglight1(mag);
   else polaritymode(mag);
