@@ -31,6 +31,8 @@ int Bpin = 6;
 int SENSOR_MIN = -32767;
 int AMBIENT_MIN = 2000;
 int SENSOR_MAX = 32767;
+bool ENABLE_AMBIENT_MIN_CAL = false; //Try and figure out a noise floor at startup. Overrides AMBIENT_MIN.
+bool ENABLE_MAG_CALIBRATION = false;
 Vector mag = {0,0,0};
 //Magnetic calibration using this page as a guide:
 // https://github.com/kriswiner/MPU6050/wiki/Simple-and-Effective-Magnetometer-Calibration
@@ -92,6 +94,7 @@ void magcal(int dur) {
   //m = max(m, mag_max[2]);
   //Or maybe add up all the mins and maxes and take the average?
   int m = (abs(mag_min[0]) + abs(mag_min[1]) + abs(mag_min[2]) + mag_max[0] + mag_max[1] + mag_max[2])/6;
+  if (ENABLE_AMBIENT_MIN_CAL) AMBIENT_MIN = m;
   //Indicate we are checking zero
   analogWrite(Bpin, 255);
   delay(5000);
@@ -107,6 +110,7 @@ void magcal(int dur) {
 }
 
 Vector applymagcal(Vector mag) {
+  if (!ENABLE_MAG_CALIBRATION) return mag;
   Vector out = {
     constrain(mag.XAxis, SENSOR_MIN, SENSOR_MAX),
     constrain(mag.YAxis, SENSOR_MIN, SENSOR_MAX),
@@ -155,7 +159,7 @@ void setup()
   float declinationAngle = (11 + (37.0 / 60.0)) / (180 / PI);
   compass.setDeclinationAngle(declinationAngle);
   //Calibrate our magnetic sensor
-  magcal(mag_cal_duration);
+  if (ENABLE_MAG_CALIBRATION) magcal(mag_cal_duration);
 }
 
 void rgbflash(int pin, int num) {
@@ -166,52 +170,19 @@ void rgbflash(int pin, int num) {
     delay(100);
   }
 }
-
-//Colors for each axis
-void maglight1(Vector mag) {
-  //Apply our calibration factors to the magnetic data
-  Vector mag2 = applymagcal(mag);
-  int x = constrain(abs(mag.XAxis), AMBIENT_MIN, SENSOR_MAX);
-  int y = constrain(abs(mag.YAxis), AMBIENT_MIN, SENSOR_MAX);
-  int z = constrain(abs(mag.ZAxis), AMBIENT_MIN, SENSOR_MAX);
-  //Normalize our data to 0-255 for analog output
-  int xnorm = map(x, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
-  int ynorm = map(y, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
-  int znorm = map(z, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
-  //And now simply write the value out to our RGB leds
-  //Serial.print("DATA: ");
-  //Serial.print(xnorm);
-  //Serial.print("   ");
-  //Serial.print(ynorm);
-  //Serial.print("   ");
-  //Serial.println(znorm);
-  analogWrite(Rpin, xnorm);
-  analogWrite(Gpin, ynorm);
-  analogWrite(Bpin, znorm);
-}
-
-void polaritymode(Vector mag) {
-  //This time we only care about the Z axis and we are looking for negative and positive values
-  //North or south pole determines red or blue LED
-  int outpin = Rpin;
-  int otherpin = Bpin;
-  //Apply our calibration factors to the magnetic data
-  Vector mag2 = applymagcal(mag);
-  if (mag2.ZAxis < 0) { outpin = Bpin; otherpin = Rpin; }
-  //And now the same as maglight1 but just for z data
-  int z = mag2.ZAxis - zmag_polarity_bias;
-  z = constrain(abs(z), AMBIENT_MIN, SENSOR_MAX);
-  int znorm = map(z, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
-  analogWrite(outpin, znorm);
-  analogWrite(otherpin, 0);
-  analogWrite(Gpin, 0);
-}
-
-struct sensordata {
+// Thought this would look nicer but it changes a LOT
+//magnetic sensor data
+struct MD {
   long magx;
   long magy;
   long magz;
   float magh;
+  long rgbxnorm;
+  long rgbynorm;
+  long rgbznorm;
+};
+//IMU sensor data
+struct ID {
   long accelx;
   long accely;
   long accelz;
@@ -221,21 +192,22 @@ struct sensordata {
   long yaw;
   long pitch;
   long roll;
+};
+//Environmental sensor data
+struct ED {
   float envtemp;
   long envpress;
   float envalt;
-  long rgbxnorm;
-  long rgbynorm;
-  long rgbznorm;
 };
-typedef struct sensordata _SD;
+struct _SD {
+  struct MD magneticData;
+  struct ID imuData;
+  struct ED envData;
+};
 
-
-void sensormonitorfeed() {
-  // Feed function for the SensorMonitor app
-  // Simply sends our struct over serial to the receiving side.
+struct MD getMagneticData() {
+  struct MD returndata;
   
-  //Mag data
   mag = compass.readRaw();
   //Apply our calibration factors to the magnetic data
   Vector mag2 = applymagcal(mag);
@@ -248,60 +220,91 @@ void sensormonitorfeed() {
   compass.getHeadingDegrees();
   float h = mag.HeadingDegress;
 
-  _SD sensordata;
-  sensordata.magx = mag2.XAxis;
-  sensordata.magy = mag2.YAxis;
-  sensordata.magz = mag2.ZAxis;
-  sensordata.magh = h;
+  returndata.magx = mag2.XAxis;
+  returndata.magy = mag2.YAxis;
+  returndata.magz = mag2.ZAxis;
+  returndata.magh = h;
+  //RGB data depends on whether we are in 3-axis or polarity mode
+  if (digitalRead(modepin) == HIGH) { //3-axis light show
+    returndata.rgbxnorm = magxnorm;
+    returndata.rgbynorm = magynorm;
+    returndata.rgbznorm = magznorm;
+  } else { //Polarity mode
+    //In polarity mode we are only using the red and blue leds (x and z)
+    returndata.rgbxnorm = 0;
+    returndata.rgbynorm = 0;
+    returndata.rgbznorm = 0;
+    //same as maglight1 but just for z data
+    int adjusted_z = mag2.ZAxis - zmag_polarity_bias;
+    int pz = constrain(abs(adjusted_z), AMBIENT_MIN, SENSOR_MAX);
+    int pznorm = map(pz, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
+    if (adjusted_z < 0) returndata.rgbznorm = pznorm;
+    else returndata.rgbxnorm = pznorm;
+  }
+
+  return returndata;
+};
+
+struct ID getIMUData() {
+  struct ID returndata;
+  
   sixDOF.gyro.readGyro(gyroval);
   sixDOF.acc.readAccel(accval);
   //Sensor drift, especially for the yaw axis, is really bad for some reason with getAngles()
-  //sixDOF.getAngles(angles);
-  sixDOF.getYawPitchRoll(angles);
-  sensordata.accelx = accval[0];
-  sensordata.accely = accval[1];
-  sensordata.accelz = accval[2];
-  sensordata.gyrox = gyroval[0];
-  sensordata.gyroy = gyroval[1];
-  sensordata.gyroz = gyroval[2];
-  sensordata.yaw = angles[0];
-  sensordata.pitch = angles[1];
-  sensordata.roll = angles[2];
-  sensordata.envtemp = bmp.getTemperature();
-  sensordata.envpress = (long)bmp.getPressure();
-  sensordata.envalt = bmp.calAltitude(SEA_LEVEL_PRESSURE, sensordata.envpress);
-  //RGB data depends on whether we are in 3-axis or polarity mode
-  if (digitalRead(modepin) == HIGH) { //3-axis light show
-    sensordata.rgbxnorm = magxnorm;
-    sensordata.rgbynorm = magynorm;
-    sensordata.rgbznorm = magznorm;
-  } else { //Polarity mode
-    //In polarity mode we are only using the red and blue leds (x and z)
-    sensordata.rgbxnorm = 0;
-    sensordata.rgbynorm = 0;
-    sensordata.rgbznorm = 0;
-    //same as maglight1 but just for z data
-    int pz = constrain(mag2.ZAxis - zmag_polarity_bias, AMBIENT_MIN, SENSOR_MAX);
-    int pznorm = map(abs(pz), AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
-    if (mag.ZAxis < 0) sensordata.rgbznorm = pznorm;
-    else sensordata.rgbxnorm = pznorm;
+  sixDOF.getAngles(angles);
+  //sixDOF.getYawPitchRoll(angles);
+  returndata.accelx = accval[0];
+  returndata.accely = accval[1];
+  returndata.accelz = accval[2];
+  returndata.gyrox = gyroval[0];
+  returndata.gyroy = gyroval[1];
+  returndata.gyroz = gyroval[2];
+  returndata.yaw = angles[0];
+  returndata.pitch = angles[1];
+  returndata.roll = angles[2];
 
-  }
-  //Help with corrupted data?
+  return returndata;
+}
+
+struct ED getEnvData() {
+  struct ED returndata;
+  
+  returndata.envtemp = bmp.getTemperature();
+  returndata.envpress = (long)bmp.getPressure();
+  returndata.envalt = bmp.calAltitude(SEA_LEVEL_PRESSURE, returndata.envpress);
+
+  return returndata;
+} 
+
+void sendOverSerial(struct _SD sensordata) {
+  // Feed function for the SensorMonitor app
+  // Simply sends our nested structs over serial to the receiving side.
   Serial.flush();
   Serial.write((uint8_t *) &sensordata, (uint16_t) sizeof(sensordata));
   Serial.print("ZENDZ\r\n"); // Think this might fix the issues with connection dropouts
 }
 
+
 void loop()
 {
-  mag = compass.readRaw();
-  //Light show
-  if (digitalRead(modepin) == HIGH) maglight1(mag);
-  else polaritymode(mag);
+  //Get our sensor data and set up the structs
+  //Most of the loop only needs magnetic data for the RGB output
+  struct MD magdata = getMagneticData();  
+  //Light show  
+  analogWrite(Rpin, magdata.rgbxnorm);
+  analogWrite(Gpin, magdata.rgbynorm);
+  analogWrite(Bpin, magdata.rgbznorm);
+  //Send data over serial 
   if (throttle == 3) {
     throttle = 0;
-    sensormonitorfeed();
+    
+    struct ID imudata = getIMUData();
+    struct ED envdata = getEnvData();
+    struct _SD sensordata;
+    sensordata.magneticData = magdata;
+    sensordata.imuData = imudata;
+    sensordata.envData = envdata;
+    sendOverSerial(sensordata);
   } else throttle++;
   
   delay(20);

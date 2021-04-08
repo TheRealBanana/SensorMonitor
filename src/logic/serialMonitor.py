@@ -8,13 +8,54 @@ import ctypes
 
 coolit = 0.001 # throttle serial reading
 
-#Has to be in the same order as the struct in our arduino code
-class SD(ctypes.Structure):
+#Has to be in the same order as the struct in our arduino code:
+"""
+//magnetic sensor data
+struct MD {
+  long magx;
+  long magy;
+  long magz;
+  float magh;
+  long rgbxnorm;
+  long rgbynorm;
+  long rgbznorm;
+};
+//IMU sensor data
+struct ID {
+  long accelx;
+  long accely;
+  long accelz;
+  long gyrox;
+  long gyroy;
+  long gyroz;
+  long yaw;
+  long pitch;
+  long roll;
+};
+//Environmental sensor data
+struct ED {
+  float envtemp;
+  long envpress;
+  float envalt;
+};
+struct _SD {
+  struct MD magneticData;
+  struct ID imuData;
+  struct ED envData;
+};
+"""
+class MD(ctypes.Structure):
     _fields_ = (
         ('magx', ctypes.c_int),
         ('magy', ctypes.c_int),
         ('magz', ctypes.c_int),
         ('magh', ctypes.c_float),
+        ('rgbxnorm', ctypes.c_int),
+        ('rgbynorm', ctypes.c_int),
+        ('rgbznorm', ctypes.c_int)
+    )
+class ID(ctypes.Structure):
+    _fields_ = (
         ('accelx', ctypes.c_int),
         ('accely', ctypes.c_int),
         ('accelz', ctypes.c_int),
@@ -23,15 +64,20 @@ class SD(ctypes.Structure):
         ('gyroz', ctypes.c_int),
         ('yaw', ctypes.c_int),
         ('pitch', ctypes.c_int),
-        ('roll', ctypes.c_int),
+        ('roll', ctypes.c_int)
+    )
+class ED(ctypes.Structure):
+    _fields_ = (
         ('envtemp', ctypes.c_float),
         ('envpress', ctypes.c_int),
-        ('envalt', ctypes.c_float),
-        ('rgbxnorm', ctypes.c_int),
-        ('rgbynorm', ctypes.c_int),
-        ('rgbznorm', ctypes.c_int),
+        ('envalt', ctypes.c_float)
     )
-
+class SD(ctypes.Structure):
+    _fields_ = (
+        ('magneticData', MD),
+        ('imuData', ID),
+        ('envData', ED)
+    )
 #Having some trouble with pyserial. For some reason its stopping at 32 bytes.
 def _readline(ser):
     c = ser.read(1)

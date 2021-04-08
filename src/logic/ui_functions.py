@@ -64,60 +64,74 @@ class UIFunctions:
         self.uiref.connectButton.clicked.connect(self.initSerial)
 
         """
-        ('magx', ctypes.c_int),
-        ('magy', ctypes.c_int),
-        ('magz', ctypes.c_int),
-        ('magh', ctypes.c_float),
-        ('accelx', ctypes.c_int),
-        ('accely', ctypes.c_int),
-        ('accelz', ctypes.c_int),
-        ('gyrox', ctypes.c_int),
-        ('gyroy', ctypes.c_int),
-        ('gyroz', ctypes.c_int),
-        ('yaw', ctypes.c_int),
-        ('pitch', ctypes.c_int),
-        ('roll', ctypes.c_int),
-        ('envtemp', ctypes.c_float),
-        ('envpress', ctypes.c_long),
-        ('envalt', ctypes.c_int),
-        ('rgbxnorm', ctypes.c_int),
-        ('rgbynorm', ctypes.c_int),
-        ('rgbznorm', ctypes.c_int),
-        """
+//magnetic sensor data
+struct MD {
+  long magx;
+  long magy;
+  long magz;
+  float magh;
+  long rgbxnorm;
+  long rgbynorm;
+  long rgbznorm;
+};
+//IMU sensor data
+struct ID {
+  long accelx;
+  long accely;
+  long accelz;
+  long gyrox;
+  long gyroy;
+  long gyroz;
+  long yaw;
+  long pitch;
+  long roll;
+};
+//Environmental sensor data
+struct ED {
+  float envtemp;
+  long envpress;
+  float envalt;
+};
+struct _SD {
+  struct MD magneticData;
+  struct ID imuData;
+  struct ED envData;
+};
+"""
     def updateDataFromSerial(self, serialdata):
         #Magnetic sensor data
-        setElementValue(self.uiref.xdataMag, serialdata.magx)
-        setElementValue(self.uiref.ydataMag, serialdata.magy)
-        setElementValue(self.uiref.zdataMag, serialdata.magz)
-        setElementValue(self.uiref.hdataMag, serialdata.magh)
+        setElementValue(self.uiref.xdataMag, serialdata.magneticData.magx)
+        setElementValue(self.uiref.ydataMag, serialdata.magneticData.magy)
+        setElementValue(self.uiref.zdataMag, serialdata.magneticData.magz)
+        setElementValue(self.uiref.hdataMag, serialdata.magneticData.magh)
         #Acceleration sensor data
-        setElementValue(self.uiref.xdataAcc, serialdata.accelx)
-        setElementValue(self.uiref.ydataAcc, serialdata.accely)
-        setElementValue(self.uiref.zdataAcc, serialdata.accelz)
+        setElementValue(self.uiref.xdataAcc, serialdata.imuData.accelx)
+        setElementValue(self.uiref.ydataAcc, serialdata.imuData.accely)
+        setElementValue(self.uiref.zdataAcc, serialdata.imuData.accelz)
         #Gyro sensor data
-        setElementValue(self.uiref.xdataGyro, serialdata.gyrox)
-        setElementValue(self.uiref.ydataGyro, serialdata.gyroy)
-        setElementValue(self.uiref.zdataGyro, serialdata.gyroz)
+        setElementValue(self.uiref.xdataGyro, serialdata.imuData.gyrox)
+        setElementValue(self.uiref.ydataGyro, serialdata.imuData.gyroy)
+        setElementValue(self.uiref.zdataGyro, serialdata.imuData.gyroz)
         #Orientation sensor data
-        setElementValue(self.uiref.yawdata, serialdata.yaw)
-        setElementValue(self.uiref.pitchdata, serialdata.pitch)
-        setElementValue(self.uiref.rolldata, serialdata.roll)
+        setElementValue(self.uiref.yawdata, serialdata.imuData.yaw)
+        setElementValue(self.uiref.pitchdata, serialdata.imuData.pitch)
+        setElementValue(self.uiref.rolldata, serialdata.imuData.roll)
         #Environmental sensor data
-        setElementValue(self.uiref.tempdataEnv, serialdata.envtemp)
-        setElementValue(self.uiref.pressdataEnv, serialdata.envpress)
-        setElementValue(self.uiref.altdataEnv, serialdata.envalt)
+        setElementValue(self.uiref.tempdataEnv, serialdata.envData.envtemp)
+        setElementValue(self.uiref.pressdataEnv, serialdata.envData.envpress)
+        setElementValue(self.uiref.altdataEnv, serialdata.envData.envalt)
         #RGB program data
-        setElementValue(self.uiref.xnormData, serialdata.rgbxnorm)
-        setElementValue(self.uiref.ynormData, serialdata.rgbynorm)
-        setElementValue(self.uiref.znormData, serialdata.rgbznorm)
+        setElementValue(self.uiref.xnormData, serialdata.magneticData.rgbxnorm)
+        setElementValue(self.uiref.ynormData, serialdata.magneticData.rgbynorm)
+        setElementValue(self.uiref.znormData, serialdata.magneticData.rgbznorm)
         #I for some reason thought I had two sets of output data for RGB but I just have one
         #The other boxes we'll just use to color
         #Just plugging in the numbers gives a gradient from black to full color but we want
         #a gradient from white to full color. That requires subtracting the color component we want
         #from the other colors, and setting our color to 255.
-        red = "background-color: rgb(%s, %s, %s);" % (255, 255-serialdata.rgbxnorm, 255-serialdata.rgbxnorm)
-        green = "background-color: rgb(%s, %s, %s);" % (255-serialdata.rgbynorm, 255, 255-serialdata.rgbynorm)
-        blue = "background-color: rgb(%s, %s, %s);" % (255-serialdata.rgbznorm, 255-serialdata.rgbznorm, 255)
+        red = "background-color: rgb(%s, %s, %s);" % (255, 255-serialdata.magneticData.rgbxnorm, 255-serialdata.magneticData.rgbxnorm)
+        green = "background-color: rgb(%s, %s, %s);" % (255-serialdata.magneticData.rgbynorm, 255, 255-serialdata.magneticData.rgbynorm)
+        blue = "background-color: rgb(%s, %s, %s);" % (255-serialdata.magneticData.rgbznorm, 255-serialdata.magneticData.rgbznorm, 255)
         self.uiref.redData.setStyleSheet(red)
         self.uiref.greenData.setStyleSheet(green)
         self.uiref.blueData.setStyleSheet(blue)
