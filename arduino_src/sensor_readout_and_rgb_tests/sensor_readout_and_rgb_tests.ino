@@ -4,12 +4,47 @@
  */
 
 #include <Wire.h>
+#include <Math.h>
 #include <DFRobot_QMC5883.h>
 #include "DFRobot_BMP280.h"
 #include <FreeSixIMU.h>
 #include <FIMU_ADXL345.h>
 #include <FIMU_ITG3200.h>
 
+// Thought this would look nicer but it changes a LOT
+//magnetic sensor data
+struct MD {
+  long magx;
+  long magy;
+  long magz;
+  float magh;
+  long rgbxnorm;
+  long rgbynorm;
+  long rgbznorm;
+};
+//IMU sensor data
+struct ID {
+  long accelx;
+  long accely;
+  long accelz;
+  long gyrox;
+  long gyroy;
+  long gyroz;
+  long yaw;
+  long pitch;
+  long roll;
+};
+//Environmental sensor data
+struct ED {
+  float envtemp;
+  long envpress;
+  float envalt;
+};
+struct _SD {
+  struct MD magneticData;
+  struct ID imuData;
+  struct ED envData;
+};
 
 typedef DFRobot_BMP280_IIC    BMP;
 BMP   bmp(&Wire, BMP::eSdo_high);
@@ -19,6 +54,8 @@ FreeSixIMU sixDOF = FreeSixIMU();
 float angles[3]; // yaw pitch roll
 int accval[3]; //Raw acc
 float gyroval[3]; // Raw gyro
+
+float declinationAngle = (11 + (37.0 / 60.0)) / (180 / PI);
 
 int modepin = 2;
 int Rpin = 3;
@@ -32,7 +69,7 @@ int SENSOR_MIN = -32767;
 int AMBIENT_MIN = 2000;
 int SENSOR_MAX = 32767;
 bool ENABLE_AMBIENT_MIN_CAL = false; //Try and figure out a noise floor at startup. Overrides AMBIENT_MIN.
-bool ENABLE_MAG_CALIBRATION = false;
+bool ENABLE_MAG_CALIBRATION = true;
 Vector mag = {0,0,0};
 //Magnetic calibration using this page as a guide:
 // https://github.com/kriswiner/MPU6050/wiki/Simple-and-Effective-Magnetometer-Calibration
@@ -52,6 +89,7 @@ int PWM_MAX = 255;
 //But at the speed the serial data is fine, the RGB outputs arent smooth.
 //The attempt here is to just run the serial data every Nth cycle
 int throttle = 1;
+
 
 //Calibrate our magnetometer for dur seconds
 void magcal(int dur) {  
@@ -111,11 +149,7 @@ void magcal(int dur) {
 
 Vector applymagcal(Vector mag) {
   if (!ENABLE_MAG_CALIBRATION) return mag;
-  Vector out = {
-    constrain(mag.XAxis, SENSOR_MIN, SENSOR_MAX),
-    constrain(mag.YAxis, SENSOR_MIN, SENSOR_MAX),
-    constrain(mag.ZAxis, SENSOR_MIN, SENSOR_MAX)
-  };
+  Vector out = mag;
   //Add our bias factor to recenter our data to 0
   out.XAxis = out.XAxis - mag_bias[0];
   out.YAxis = out.YAxis - mag_bias[1];
@@ -125,6 +159,32 @@ Vector applymagcal(Vector mag) {
   out.YAxis = mag.YAxis * mag_scale[1];
   out.ZAxis = mag.ZAxis * mag_scale[2];
   
+  return out;
+}
+
+Vector correctHeadingWithIMU(Vector mag, struct ID * imudata) {
+  Vector out = mag;
+  
+  //Correcting heading data by applying a rotation to align the different frames of reference
+  //Using MTD-0801_1_0_Calculating_Heading_Elevation_Bank_Angle.pdf as a reference guide
+  //Convert to radians first
+  float pitch = imudata->pitch * PI/180.0f; //Alpha
+  float roll = imudata->roll * PI/180.0f;   //Beta
+  //float pitch = atan2(imudata->accelx, imudata->accelz);
+  //float roll = atan2(imudata->accely, imudata->accelz);
+  //We only need the X/Y data to calculate heading so we dont need to rotate the Gamma angle
+  out.XAxis = mag.XAxis*cos(pitch) + mag.YAxis*sin(roll)*sin(pitch) - mag.ZAxis*cos(roll)*sin(pitch); //Might need to subtract Z
+  out.YAxis = mag.YAxis*cos(roll) - mag.ZAxis*sin(roll);
+  
+  //Now calculate heading using arctan(magx/magy) and convert to degrees
+  float magh_c = atan2(out.YAxis, out.XAxis) + declinationAngle;
+  if (magh_c < 0.0f) magh_c += 2*PI;
+  if (magh_c >= 2*PI) magh_c -= 2*PI;
+  magh_c = magh_c * 180/PI;
+  out.HeadingDegress = magh_c;
+  //Serial.println("MAGH/MAGH_C: " + (String)mag.HeadingDegress + "  |  " + (String)out.HeadingDegress);
+  //Serial.println("P/R: " + (String)(pitch* 180/PI) + "/" + (String)imudata->pitch + "  |  " + (String)(roll* 180/PI) + "/" + (String)imudata->roll);
+
   return out;
 }
 
@@ -156,7 +216,7 @@ void setup()
   // Formula: (deg + (min / 60.0)) / (180 / PI);
   //
   // Using socal declination of 11'37E
-  float declinationAngle = (11 + (37.0 / 60.0)) / (180 / PI);
+  
   compass.setDeclinationAngle(declinationAngle);
   //Calibrate our magnetic sensor
   if (ENABLE_MAG_CALIBRATION) magcal(mag_cal_duration);
@@ -170,60 +230,29 @@ void rgbflash(int pin, int num) {
     delay(100);
   }
 }
-// Thought this would look nicer but it changes a LOT
-//magnetic sensor data
-struct MD {
-  long magx;
-  long magy;
-  long magz;
-  float magh;
-  long rgbxnorm;
-  long rgbynorm;
-  long rgbznorm;
-};
-//IMU sensor data
-struct ID {
-  long accelx;
-  long accely;
-  long accelz;
-  long gyrox;
-  long gyroy;
-  long gyroz;
-  long yaw;
-  long pitch;
-  long roll;
-};
-//Environmental sensor data
-struct ED {
-  float envtemp;
-  long envpress;
-  float envalt;
-};
-struct _SD {
-  struct MD magneticData;
-  struct ID imuData;
-  struct ED envData;
-};
 
-struct MD getMagneticData() {
+struct MD getMagneticData(struct ID *imudata) {
   struct MD returndata;
   
   mag = compass.readRaw();
-  //Apply our calibration factors to the magnetic data
+  mag.XAxis = constrain(mag.XAxis, SENSOR_MIN, SENSOR_MAX);
+  mag.YAxis = constrain(mag.YAxis, SENSOR_MIN, SENSOR_MAX);
+  mag.ZAxis = constrain(mag.ZAxis, SENSOR_MIN, SENSOR_MAX);
+
+  //Apply tilt compensation and our calibration factors to the magnetic data
+  mag = correctHeadingWithIMU(mag, imudata);
   Vector mag2 = applymagcal(mag);
-  int rawmagx = constrain(abs(mag.XAxis), AMBIENT_MIN, SENSOR_MAX);
-  int rawmagy = constrain(abs(mag.YAxis), AMBIENT_MIN, SENSOR_MAX);
-  int rawmagz = constrain(abs(mag.ZAxis), AMBIENT_MIN, SENSOR_MAX);
+  int rawmagx = constrain(abs(mag2.XAxis), AMBIENT_MIN, SENSOR_MAX);
+  int rawmagy = constrain(abs(mag2.YAxis), AMBIENT_MIN, SENSOR_MAX);
+  int rawmagz = constrain(abs(mag2.ZAxis), AMBIENT_MIN, SENSOR_MAX);
   int magxnorm = map(rawmagx, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
   int magynorm = map(rawmagy, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
   int magznorm = map(rawmagz, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
-  compass.getHeadingDegrees();
-  float h = mag.HeadingDegress;
 
   returndata.magx = mag2.XAxis;
   returndata.magy = mag2.YAxis;
   returndata.magz = mag2.ZAxis;
-  returndata.magh = h;
+  returndata.magh = mag.HeadingDegress; // Will be corrected later
   //RGB data depends on whether we are in 3-axis or polarity mode
   if (digitalRead(modepin) == HIGH) { //3-axis light show
     returndata.rgbxnorm = magxnorm;
@@ -251,8 +280,9 @@ struct ID getIMUData() {
   sixDOF.gyro.readGyro(gyroval);
   sixDOF.acc.readAccel(accval);
   //Sensor drift, especially for the yaw axis, is really bad for some reason with getAngles()
-  sixDOF.getAngles(angles);
-  //sixDOF.getYawPitchRoll(angles);
+  //sixDOF.getAngles(angles); // These values are absolute values from 0-360
+  sixDOF.getYawPitchRoll(angles); // This is the type of values we need, relative different in angle from rest.
+  //sixDOF.getEuler(angles);
   returndata.accelx = accval[0];
   returndata.accely = accval[1];
   returndata.accelz = accval[2];
@@ -289,7 +319,8 @@ void loop()
 {
   //Get our sensor data and set up the structs
   //Most of the loop only needs magnetic data for the RGB output
-  struct MD magdata = getMagneticData();  
+  struct ID imudata = getIMUData();
+  struct MD magdata = getMagneticData(&imudata);  
   //Light show  
   analogWrite(Rpin, magdata.rgbxnorm);
   analogWrite(Gpin, magdata.rgbynorm);
@@ -298,13 +329,14 @@ void loop()
   if (throttle == 3) {
     throttle = 0;
     
-    struct ID imudata = getIMUData();
     struct ED envdata = getEnvData();
     struct _SD sensordata;
     sensordata.magneticData = magdata;
     sensordata.imuData = imudata;
     sensordata.envData = envdata;
+    
     sendOverSerial(sensordata);
+    
   } else throttle++;
   
   delay(20);
