@@ -286,7 +286,6 @@ struct MD getMagneticData(struct ID *imudata) {
 
   //Apply tilt compensation and our calibration factors to the magnetic data
   mag = correctHeadingWithIMU(mag, imudata);
-  Vector mag2 = applymagcal(mag);
   int rawmagx = constrain(abs(mag2.XAxis), AMBIENT_MIN, SENSOR_MAX);
   int rawmagy = constrain(abs(mag2.YAxis), AMBIENT_MIN, SENSOR_MAX);
   int rawmagz = constrain(abs(mag2.ZAxis), AMBIENT_MIN, SENSOR_MAX);
