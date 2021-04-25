@@ -206,6 +206,8 @@ Vector applymagcal(Vector mag) {
 
 Vector correctHeadingWithIMU(Vector mag, struct ID * imudata) {
   Vector out = mag;
+  float tmpx = 0.0f;
+  float tmpy = 0.0f;
   
   //Correcting heading data by applying a rotation to align the different frames of reference
   //Using MTD-0801_1_0_Calculating_Heading_Elevation_Bank_Angle.pdf as a reference guide
@@ -215,14 +217,14 @@ Vector correctHeadingWithIMU(Vector mag, struct ID * imudata) {
   //float pitch = atan2(imudata->accelx, imudata->accelz);
   //float roll = atan2(imudata->accely, imudata->accelz);
   //We only need the X/Y data to calculate heading so we dont need to rotate the Gamma angle
-  out.XAxis = mag.XAxis*cos(pitch) + mag.YAxis*sin(roll)*sin(pitch) - mag.ZAxis*cos(roll)*sin(pitch); //Might need to subtract Z
-  out.YAxis = mag.YAxis*cos(roll) - mag.ZAxis*sin(roll);
+  tmpx = mag.XAxis*cos(pitch) + mag.YAxis*sin(roll)*sin(pitch) - mag.ZAxis*cos(roll)*sin(pitch); //Might need to subtract Z
+  tmpy = mag.YAxis*cos(roll) - mag.ZAxis*sin(roll);
 
   //Correct for hard and soft iron deposits
   out = applymagcal(out);
   
   //Now calculate heading using arctan(magx/magy) and convert to degrees
-  float magh_c = atan2(out.YAxis, out.XAxis) + declinationAngle;
+  float magh_c = atan2(tmpy, tmpx) + declinationAngle;
   if (magh_c < 0.0f) magh_c += 2*PI;
   if (magh_c >= 2*PI) magh_c -= 2*PI;
   magh_c = magh_c * 180/PI;
@@ -286,16 +288,16 @@ struct MD getMagneticData(struct ID *imudata) {
 
   //Apply tilt compensation and our calibration factors to the magnetic data
   mag = correctHeadingWithIMU(mag, imudata);
-  int rawmagx = constrain(abs(mag2.XAxis), AMBIENT_MIN, SENSOR_MAX);
-  int rawmagy = constrain(abs(mag2.YAxis), AMBIENT_MIN, SENSOR_MAX);
-  int rawmagz = constrain(abs(mag2.ZAxis), AMBIENT_MIN, SENSOR_MAX);
+  int rawmagx = constrain(abs(mag.XAxis), AMBIENT_MIN, SENSOR_MAX);
+  int rawmagy = constrain(abs(mag.YAxis), AMBIENT_MIN, SENSOR_MAX);
+  int rawmagz = constrain(abs(mag.ZAxis), AMBIENT_MIN, SENSOR_MAX);
   int magxnorm = map(rawmagx, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
   int magynorm = map(rawmagy, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
   int magznorm = map(rawmagz, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
 
-  returndata.magx = mag2.XAxis;
-  returndata.magy = mag2.YAxis;
-  returndata.magz = mag2.ZAxis;
+  returndata.magx = mag.XAxis;
+  returndata.magy = mag.YAxis;
+  returndata.magz = mag.ZAxis;
   //smooth the value out
   if (ENABLE_FILTERING) mag.HeadingDegress = getFilteredHeading(mag.HeadingDegress);
   returndata.magh = mag.HeadingDegress; 
@@ -310,7 +312,7 @@ struct MD getMagneticData(struct ID *imudata) {
     returndata.rgbynorm = 0;
     returndata.rgbznorm = 0;
     //same as maglight1 but just for z data
-    int adjusted_z = mag2.ZAxis - zmag_polarity_bias;
+    int adjusted_z = mag.ZAxis - zmag_polarity_bias;
     int pz = constrain(abs(adjusted_z), AMBIENT_MIN, SENSOR_MAX);
     int pznorm = map(pz, AMBIENT_MIN, SENSOR_MAX, PWM_MIN, PWM_MAX);
     if (adjusted_z < 0) returndata.rgbznorm = pznorm;
