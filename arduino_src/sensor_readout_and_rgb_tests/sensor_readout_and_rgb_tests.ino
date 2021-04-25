@@ -10,6 +10,7 @@
 #include <FreeSixIMU.h>
 #include <FIMU_ADXL345.h>
 #include <FIMU_ITG3200.h>
+#include <ArduinoQueue.h>
 
 // Thought this would look nicer but it changes a LOT
 //magnetic sensor data
@@ -90,6 +91,47 @@ int PWM_MAX = 255;
 //The attempt here is to just run the serial data every Nth cycle
 int throttle = 1;
 
+//My first idea for trying to smooth out the magnetic data
+//Take the average heading over the last buffer_size readings (rolling average).
+bool ENABLE_FILTERING = true;
+int buffer_size = 25;
+double sinheading = 0.0;
+double cosheading = 0.0;
+ArduinoQueue<double> sin_heading_buffer(buffer_size);
+ArduinoQueue<double> cos_heading_buffer(buffer_size);
+double sin_heading_buffer_rolling_sum = 0;
+double cos_heading_buffer_rolling_sum = 0;
+double atan_angle = 0;
+
+//Having trouble using normal averaging when the angle is around 0/360 since the huge swing in value messes up the averaging.
+//Taking the sin and cosine of the current angle will give us a continuous and periodic set of values so there shouldnt be any swapping issues anywhere
+//Then we take the atan2 of the average of the sine/cosine values to get our filtered heading. This solution is a bit heavy on the math.
+//Next attempt will be to define an error function and try and implement some or all parts of PID control.
+int getFilteredHeading(int newheading) {
+  sinheading = sin(degToRads(newheading)); 
+  cosheading = cos(degToRads(newheading)); 
+  if (!sin_heading_buffer.isFull() or !cos_heading_buffer.isFull()) {
+    sin_heading_buffer.enqueue(sinheading);
+    sin_heading_buffer_rolling_sum += sinheading;
+    cos_heading_buffer.enqueue(cosheading);
+    cos_heading_buffer_rolling_sum += cosheading;
+    return newheading;
+  }
+  // Now that we have a full buffer we take the average of all values and then take the atan2 of that value and return it
+  // Only two things that change are removing the oldest value and adding a new value
+  sin_heading_buffer_rolling_sum -= sin_heading_buffer.dequeue();
+  sin_heading_buffer.enqueue(sinheading);
+  sin_heading_buffer_rolling_sum += sinheading;
+  cos_heading_buffer_rolling_sum -= cos_heading_buffer.dequeue();
+  cos_heading_buffer.enqueue(cosheading);
+  cos_heading_buffer_rolling_sum += cosheading;
+  atan_angle = radsToDeg(atan2(sin_heading_buffer_rolling_sum/buffer_size, cos_heading_buffer_rolling_sum/buffer_size));
+  if (atan_angle < 0) atan_angle += 360; //shift the negative portion of our output to the right
+  return atan_angle; 
+}
+//Makes the math look cleaner and hopefully it doesnt drag performance down 
+double degToRads(int angle_in_degrees) { return angle_in_degrees*PI/180; } 
+int radsToDeg(double angle_in_rads) { return angle_in_rads * 180/PI; }
 
 //Calibrate our magnetometer for dur seconds
 void magcal(int dur) {  
@@ -175,6 +217,9 @@ Vector correctHeadingWithIMU(Vector mag, struct ID * imudata) {
   //We only need the X/Y data to calculate heading so we dont need to rotate the Gamma angle
   out.XAxis = mag.XAxis*cos(pitch) + mag.YAxis*sin(roll)*sin(pitch) - mag.ZAxis*cos(roll)*sin(pitch); //Might need to subtract Z
   out.YAxis = mag.YAxis*cos(roll) - mag.ZAxis*sin(roll);
+
+  //Correct for hard and soft iron deposits
+  out = applymagcal(out);
   
   //Now calculate heading using arctan(magx/magy) and convert to degrees
   float magh_c = atan2(out.YAxis, out.XAxis) + declinationAngle;
@@ -252,7 +297,9 @@ struct MD getMagneticData(struct ID *imudata) {
   returndata.magx = mag2.XAxis;
   returndata.magy = mag2.YAxis;
   returndata.magz = mag2.ZAxis;
-  returndata.magh = mag.HeadingDegress; // Will be corrected later
+  //smooth the value out
+  if (ENABLE_FILTERING) mag.HeadingDegress = getFilteredHeading(mag.HeadingDegress);
+  returndata.magh = mag.HeadingDegress; 
   //RGB data depends on whether we are in 3-axis or polarity mode
   if (digitalRead(modepin) == HIGH) { //3-axis light show
     returndata.rgbxnorm = magxnorm;

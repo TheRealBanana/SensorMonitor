@@ -63,41 +63,6 @@ class UIFunctions:
         self.uiref.connectButton.clicked.disconnect(self.disconSerial)
         self.uiref.connectButton.clicked.connect(self.initSerial)
 
-        """
-//magnetic sensor data
-struct MD {
-  long magx;
-  long magy;
-  long magz;
-  float magh;
-  long rgbxnorm;
-  long rgbynorm;
-  long rgbznorm;
-};
-//IMU sensor data
-struct ID {
-  long accelx;
-  long accely;
-  long accelz;
-  long gyrox;
-  long gyroy;
-  long gyroz;
-  long yaw;
-  long pitch;
-  long roll;
-};
-//Environmental sensor data
-struct ED {
-  float envtemp;
-  long envpress;
-  float envalt;
-};
-struct _SD {
-  struct MD magneticData;
-  struct ID imuData;
-  struct ED envData;
-};
-"""
     def updateDataFromSerial(self, serialdata):
         #Magnetic sensor data
         setElementValue(self.uiref.xdataMag, serialdata.magneticData.magx)
