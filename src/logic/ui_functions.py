@@ -1,5 +1,5 @@
 import serial
-from serial import Serial
+from sys import platform as PLATFORM
 import serial.tools.list_ports as list_serial_ports
 from .serialMonitor import SerialMonitor
 
@@ -35,8 +35,10 @@ class UIFunctions:
     def initSerial(self):
         print("Starting serial connection ")
         port = self.uiref.comPortDropdown.currentText()
+        if "linux" in PLATFORM: 
+            port = "/dev/" + port
         try:
-            self.serialConnection =  Serial(
+            self.serialConnection =  serial.Serial(
                 port=port, \
                 baudrate=9600, \
                 parity=serial.PARITY_NONE, \
