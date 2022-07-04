@@ -10,6 +10,9 @@ Holding the device up to a fan or other moving magnetic field produces a very co
 
 ![SensorMonitor_V1](https://user-images.githubusercontent.com/10580033/113110450-f299a700-91bb-11eb-9b13-60a44e38f393.png)
 
+Device in operation showing changing magnetic fields in a water pump
+https://www.youtube.com/watch?v=RWgJv9et5II
+
 Breadboard layout:  
 ![breadboard_layout](https://user-images.githubusercontent.com/10580033/113110452-f3323d80-91bb-11eb-83c3-0d74dca7cfb2.jpeg)
 
